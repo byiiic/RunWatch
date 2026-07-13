@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tmux Monitor</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --text: #1b1f2a;
+        --muted: #5f697a;
+        --line: #d8deea;
+        --running: #0f766e;
+        --idle: #596579;
+        --failed: #b42318;
+        --code-bg: #101828;
+        --code-text: #d0d5dd;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .bar,
+      main {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 0 auto;
+      }
+
+      .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 72px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .summary {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      main {
+        padding: 24px 0 40px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+      }
+
+      .quota {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .quota-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px 16px;
+      }
+
+      .quota-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .quota-percent {
+        font-size: 28px;
+        font-weight: 800;
+      }
+
+      .quota-bar {
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--line);
+      }
+
+      .quota-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: var(--running);
+      }
+
+      .quota-fill.warn {
+        background: #b7791f;
+      }
+
+      .quota-fill.danger {
+        background: var(--failed);
+      }
+
+      .quota-meta {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .pane {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .pane-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .title {
+        min-width: 0;
+      }
+
+      .session {
+        font-weight: 700;
+        overflow-wrap: anywhere;
+      }
+
+      .meta,
+      .path,
+      .error,
+      .empty {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .badge {
+        flex: 0 0 auto;
+        border-radius: 999px;
+        padding: 4px 9px;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .running {
+        background: var(--running);
+      }
+
+      .idle {
+        background: var(--idle);
+      }
+
+      .failed {
+        background: var(--failed);
+      }
+
+      .body {
+        padding: 14px 16px 16px;
+      }
+
+      .path {
+        margin-bottom: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      pre {
+        margin: 0;
+        max-height: 260px;
+        overflow: auto;
+        border-radius: 6px;
+        background: var(--code-bg);
+        color: var(--code-text);
+        padding: 12px;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .empty,
+      .error {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 20px;
+      }
+
+      @media (max-width: 640px) {
+        .bar {
+          align-items: flex-start;
+          flex-direction: column;
+          justify-content: center;
+          padding: 14px 0;
+        }
+
+        .summary {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="bar">
+        <h1>Tmux Monitor</h1>
+        <div class="summary">
+          <span id="count">0 panes</span>
+          <span id="updated">Waiting for data</span>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section id="quota" class="quota"></section>
+      <div id="content" class="empty">Loading tmux status...</div>
+    </main>
+    <script>
+      const quota = document.getElementById("quota");
+      const content = document.getElementById("content");
+      const count = document.getElementById("count");
+      const updated = document.getElementById("updated");
+      const params = new URLSearchParams(window.location.search);
+      const TOKEN_STORAGE_KEY = "tmux-monitor-token";
+
+      if (params.has("token")) {
+        params.delete("token");
+        const query = params.toString();
+        const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
+      function getToken(forcePrompt = false) {
+        if (forcePrompt) {
+          window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        }
+
+        const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+        if (stored && !forcePrompt) {
+          return stored;
+        }
+
+        const entered = window.prompt("Monitor token");
+        const token = entered ? entered.trim() : "";
+        if (token) {
+          window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+        }
+        return token;
+      }
+
+      function statusClass(status) {
+        if (status === "failed") return "failed";
+        if (status === "running") return "running";
+        return "idle";
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function formatWindow(minutes) {
+        if (!minutes) return "window unknown";
+        if (minutes % 1440 === 0) return `${minutes / 1440}d window`;
+        if (minutes % 60 === 0) return `${minutes / 60}h window`;
+        return `${minutes}m window`;
+      }
+
+      function formatReset(timestamp) {
+        if (!timestamp) return "reset unknown";
+        return `resets ${new Date(timestamp * 1000).toLocaleString()}`;
+      }
+
+      function fillClass(percent) {
+        if (percent <= 10) return "danger";
+        if (percent <= 25) return "warn";
+        return "";
+      }
+
+      function renderQuota(data) {
+        const quotaData = data.codex_quota;
+        if (!quotaData) {
+          quota.innerHTML = "";
+          return;
+        }
+
+        if (!quotaData.available) {
+          quota.innerHTML = `
+            <div class="quota-card">
+              <div class="quota-title">Codex quota</div>
+              <div class="quota-meta">${escapeHtml(quotaData.reason || "No local quota snapshot available")}</div>
+            </div>
+          `;
+          return;
+        }
+
+        const rateLimits = quotaData.rate_limits || {};
+        const cards = ["primary", "secondary"].map((name) => {
+          const item = rateLimits[name];
+          if (!item) return "";
+          const usedPercent = Number(item.used_percent ?? 0);
+          const percent = Math.max(0, 100 - usedPercent);
+          const width = Math.max(0, Math.min(100, percent));
+          return `
+            <div class="quota-card">
+              <div class="quota-title">
+                <span>Codex ${escapeHtml(name)}</span>
+                <span>${escapeHtml(formatWindow(item.window_minutes))}</span>
+              </div>
+              <div class="quota-percent">${escapeHtml(percent.toFixed(0))}% left</div>
+              <div class="quota-bar">
+                <div class="quota-fill ${fillClass(percent)}" style="width: ${width}%"></div>
+              </div>
+              <div class="quota-meta">${escapeHtml(formatReset(item.resets_at))}</div>
+            </div>
+          `;
+        }).join("");
+
+        const plan = rateLimits.plan_type ? ` · ${rateLimits.plan_type}` : "";
+        quota.innerHTML = cards || `
+          <div class="quota-card">
+            <div class="quota-title">Codex quota${escapeHtml(plan)}</div>
+            <div class="quota-meta">Snapshot found, but no primary or secondary limits were present.</div>
+          </div>
+        `;
+      }
+
+      async function refresh() {
+        const token = getToken();
+        const options = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        let response = await fetch("/api/status", options);
+
+        if (response.status === 401) {
+          const retryToken = getToken(true);
+          const retryOptions = retryToken ? { headers: { Authorization: `Bearer ${retryToken}` } } : {};
+          response = await fetch("/api/status", retryOptions);
+        }
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const data = await response.json();
+        count.textContent = `${data.count} pane${data.count === 1 ? "" : "s"}`;
+        updated.textContent = `Updated ${new Date(data.served_at).toLocaleString()}`;
+        renderQuota(data);
+
+        if (!data.panes.length) {
+          content.className = "empty";
+          content.textContent = "No tmux panes found.";
+          return;
+        }
+
+        content.className = "grid";
+        content.innerHTML = data.panes.map((pane) => {
+          const output = (pane.output || []).slice(-12).join("\n");
+          const status = statusClass(pane.status);
+          return `
+            <article class="pane">
+              <div class="pane-head">
+                <div class="title">
+                  <div class="session">${escapeHtml(pane.session)}:${escapeHtml(pane.window)}.${escapeHtml(pane.pane_index)}</div>
+                  <div class="meta">${escapeHtml(pane.window_name)} · ${escapeHtml(pane.command)} · ${escapeHtml(pane.pane_id)}</div>
+                </div>
+                <span class="badge ${status}">${escapeHtml(pane.status)}</span>
+              </div>
+              <div class="body">
+                <div class="path">${escapeHtml(pane.path)}</div>
+                <pre>${escapeHtml(output || "(no recent output)")}</pre>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      async function loop() {
+        try {
+          await refresh();
+        } catch (error) {
+          content.className = "error";
+          content.textContent = `Unable to load tmux status: ${error.message}`;
+          updated.textContent = "Refresh failed";
+        }
+      }
+
+      loop();
+      setInterval(loop, 10000);
+    </script>
+  </body>
+</html>

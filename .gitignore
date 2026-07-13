@@ -1,0 +1,28 @@
+# Local secrets
+.env
+
+# Local virtual environments and caches
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local editor/Codex workspace state
+.vscode/
+.agents/
+.codex/
+
+# Runtime state
+monitor.log
+.monitor.pid
+*.log
+*.pid
+
+# Release artifacts
+monitor-release/
+monitor-release.zip
+monitor-release.tar.gz
+dist/
+build/
