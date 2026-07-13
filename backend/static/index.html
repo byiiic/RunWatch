@@ -23,6 +23,10 @@
         box-sizing: border-box;
       }
 
+      html {
+        scroll-padding-top: 92px;
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
@@ -32,6 +36,9 @@
       }
 
       header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
         border-bottom: 1px solid var(--line);
         background: var(--panel);
       }
@@ -56,12 +63,21 @@
         font-weight: 700;
       }
 
+      .brand-link {
+        color: inherit;
+        text-decoration: none;
+      }
+
       .summary {
         display: flex;
         align-items: center;
         gap: 14px;
         color: var(--muted);
         font-size: 14px;
+      }
+
+      #updated-short {
+        display: none;
       }
 
       main {
@@ -72,6 +88,121 @@
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 16px;
+      }
+
+      .overview {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 22px;
+        border: 1px solid #c7d2e5;
+        border-radius: 8px;
+        background: #eaf1f9;
+        padding: 12px;
+      }
+
+      .overview-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-width: 0;
+        min-height: 96px;
+        border: 1px solid #cbd7e8;
+        border-radius: 8px;
+        background: var(--panel);
+        color: inherit;
+        padding: 12px;
+        text-decoration: none;
+        transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+      }
+
+      .overview-card:hover,
+      .overview-card:focus {
+        border-color: #8aa3c7;
+        box-shadow: 0 8px 24px rgba(16, 24, 40, 0.10);
+        outline: none;
+        transform: translateY(-1px);
+      }
+
+      .overview-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .overview-label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .overview-detail {
+        flex: 0 0 auto;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .overview-value {
+        margin-top: 4px;
+        color: var(--text);
+        font-size: 24px;
+        line-height: 1.1;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .overview-meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+
+      .overview-card.attention .overview-value {
+        color: var(--failed);
+      }
+
+      .overview-card.good .overview-value {
+        color: var(--running);
+      }
+
+      #overview,
+      #quota,
+      #resources,
+      #ports,
+      #sessions {
+        scroll-margin-top: 92px;
+      }
+
+      .sessions {
+        display: grid;
+        gap: 20px;
+      }
+
+      .session-group {
+        min-width: 0;
+      }
+
+      .session-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .session-name {
+        font-size: 18px;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .session-summary {
+        color: var(--muted);
+        font-size: 13px;
+        text-align: right;
       }
 
       .resources,
@@ -278,48 +409,98 @@
       }
 
       @media (max-width: 640px) {
+        html {
+          scroll-padding-top: 64px;
+        }
+
         .bar {
-          align-items: flex-start;
-          flex-direction: column;
+          align-items: center;
+          flex-direction: row;
           justify-content: center;
-          padding: 14px 0;
+          min-height: 56px;
+          padding: 8px 0;
+        }
+
+        h1 {
+          font-size: 22px;
         }
 
         .summary {
-          align-items: flex-start;
-          flex-direction: column;
-          gap: 4px;
+          margin-left: auto;
+          font-size: 13px;
+        }
+
+        #updated {
+          display: none;
+        }
+
+        #updated-short {
+          display: inline;
         }
 
         .grid {
           grid-template-columns: 1fr;
         }
+
+        .overview {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          padding: 10px;
+        }
+
+        .overview-card {
+          min-height: 92px;
+        }
+
+        .overview-value {
+          font-size: 21px;
+        }
+
+        .session-head {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .session-summary {
+          text-align: left;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .overview {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
-  <body>
+  <body id="top">
     <header>
       <div class="bar">
-        <h1>RunWatch</h1>
+        <h1><a class="brand-link" href="#top">RunWatch</a></h1>
         <div class="summary">
           <span id="count">0 panes</span>
           <span id="updated">Waiting for data</span>
+          <span id="updated-short">--:--</span>
         </div>
       </div>
     </header>
     <main>
-      <section id="resources" class="resources"></section>
+      <section id="overview" class="overview"></section>
       <section id="quota" class="quota"></section>
+      <section id="resources" class="resources"></section>
       <section id="ports" class="ports"></section>
-      <div id="content" class="empty">Loading status...</div>
+      <div id="sessions" class="empty">Loading status...</div>
     </main>
     <script>
+      const overview = document.getElementById("overview");
       const resources = document.getElementById("resources");
       const ports = document.getElementById("ports");
       const quota = document.getElementById("quota");
-      const content = document.getElementById("content");
+      const content = document.getElementById("sessions");
       const count = document.getElementById("count");
       const updated = document.getElementById("updated");
+      const updatedShort = document.getElementById("updated-short");
       const params = new URLSearchParams(window.location.search);
       const TOKEN_STORAGE_KEY = "runwatch-token";
 
@@ -383,6 +564,168 @@
       function formatPercent(value) {
         if (value === null || value === undefined) return "unknown";
         return `${Number(value).toFixed(1)}%`;
+      }
+
+      function paneCounts(panes) {
+        return (panes || []).reduce((acc, pane) => {
+          const status = statusClass(pane.status);
+          acc.total += 1;
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, { total: 0, running: 0, failed: 0, idle: 0 });
+      }
+
+      function paneSummary(panes) {
+        const counts = paneCounts(panes);
+        const meta = [
+          counts.running ? `${counts.running} running` : "",
+          counts.failed ? `${counts.failed} failed` : "",
+          counts.idle ? `${counts.idle} idle` : "",
+        ].filter(Boolean).join(" · ") || "no active panes";
+        return {
+          label: "Sessions",
+          target: "#sessions",
+          value: `${counts.total} pane${counts.total === 1 ? "" : "s"}`,
+          meta,
+          tone: counts.failed ? "attention" : "good",
+        };
+      }
+
+      function resourceSummary(resourceData) {
+        if (!resourceData) {
+          return {
+            label: "Resources",
+            target: "#resources",
+            value: "unknown",
+            meta: "waiting for data",
+            tone: "",
+          };
+        }
+
+        const load = resourceData.load || {};
+        const memory = resourceData.memory || {};
+        const gpu = (resourceData.gpus || [])[0];
+        const gpuText = gpu
+          ? `GPU ${formatPercent(gpu.utilization_percent)} · mem ${formatPercent(gpu.memory_used_percent)}`
+          : "GPU unknown";
+        const memoryText = memory.available ? `RAM ${formatPercent(memory.used_percent)}` : "RAM unknown";
+        const value = load.available ? `CPU ${load.load_1m}` : "CPU unknown";
+        const isHot = (
+          memory.available && Number(memory.used_percent) >= 85
+        ) || (
+          gpu && (
+            Number(gpu.utilization_percent) >= 90 ||
+            Number(gpu.memory_used_percent) >= 90
+          )
+        );
+
+        return {
+          label: "Resources",
+          target: "#resources",
+          value,
+          meta: `${memoryText} · ${gpuText}`,
+          tone: isHot ? "attention" : "",
+        };
+      }
+
+      function portSummary(portData) {
+        const items = portData || [];
+        if (!items.length) {
+          return {
+            label: "Ports",
+            target: "#ports",
+            value: "no ports",
+            meta: "configure MONITOR_PORTS",
+            tone: "",
+          };
+        }
+
+        const occupied = items.filter((item) => item.occupied).length;
+        const unavailable = items.filter((item) => item.status === "unavailable").length;
+        const unknown = items.filter((item) => item.status === "unknown").length;
+        const available = items.length - occupied - unavailable - unknown;
+        const meta = [
+          occupied ? `${occupied} occupied` : "",
+          unavailable ? `${unavailable} unavailable` : "",
+          unknown ? `${unknown} unknown` : "",
+          available ? `${available} available` : "",
+        ].filter(Boolean).join(" · ");
+
+        return {
+          label: "Ports",
+          target: "#ports",
+          value: `${items.length} ports`,
+          meta,
+          tone: unavailable || unknown ? "attention" : "",
+        };
+      }
+
+      function quotaSummary(quotaData) {
+        if (!quotaData) {
+          return {
+            label: "Codex",
+            target: "#quota",
+            value: "unknown",
+            meta: "waiting for data",
+            tone: "",
+          };
+        }
+        if (!quotaData.available) {
+          return {
+            label: "Codex",
+            target: "#quota",
+            value: "unavailable",
+            meta: quotaData.reason || "no quota snapshot",
+            tone: "attention",
+          };
+        }
+
+        const rateLimits = quotaData.rate_limits || {};
+        const limits = ["primary", "secondary"]
+          .map((name) => rateLimits[name])
+          .filter(Boolean)
+          .map((item) => Math.max(0, 100 - Number(item.used_percent ?? 0)));
+
+        if (!limits.length) {
+          return {
+            label: "Codex",
+            target: "#quota",
+            value: "snapshot",
+            meta: "no limits found",
+            tone: "",
+          };
+        }
+
+        const minLeft = Math.min(...limits);
+        return {
+          label: "Codex",
+          target: "#quota",
+          value: `${minLeft.toFixed(0)}% left`,
+          meta: "minimum remaining quota",
+          tone: minLeft <= 25 ? "attention" : "good",
+        };
+      }
+
+      function renderOverview(data) {
+        const items = [
+          paneSummary(data.panes || []),
+          resourceSummary(data.resources),
+          portSummary(data.ports),
+          quotaSummary(data.codex_quota),
+        ];
+
+        overview.innerHTML = items.map((item) => `
+          <a class="overview-card ${escapeHtml(item.tone)}" href="${escapeHtml(item.target)}">
+            <div>
+              <div class="overview-top">
+                <div class="overview-label">${escapeHtml(item.label)}</div>
+                <div class="overview-detail">Details ></div>
+              </div>
+              <div class="overview-value">${escapeHtml(item.value)}</div>
+            </div>
+            <div class="overview-meta">${escapeHtml(item.meta)}</div>
+          </a>
+        `).join("");
       }
 
       function renderResources(data) {
@@ -538,6 +881,68 @@
         }).join("");
       }
 
+      function groupPanesBySession(panes) {
+        return panes.reduce((groups, pane) => {
+          const session = pane.session || "(unknown session)";
+          if (!groups.has(session)) {
+            groups.set(session, []);
+          }
+          groups.get(session).push(pane);
+          return groups;
+        }, new Map());
+      }
+
+      function summarizeSession(panes) {
+        const counts = panes.reduce((acc, pane) => {
+          const status = statusClass(pane.status);
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {});
+
+        return [
+          `${panes.length} pane${panes.length === 1 ? "" : "s"}`,
+          counts.running ? `${counts.running} running` : "",
+          counts.failed ? `${counts.failed} failed` : "",
+          counts.idle ? `${counts.idle} idle` : "",
+        ].filter(Boolean).join(" · ");
+      }
+
+      function renderPane(pane) {
+        const output = (pane.output || []).slice(-12).join("\n");
+        const status = statusClass(pane.status);
+        return `
+          <article class="pane">
+            <div class="pane-head">
+              <div class="title">
+                <div class="session">${escapeHtml(pane.window)}.${escapeHtml(pane.pane_index)}</div>
+                <div class="meta">${escapeHtml(pane.window_name)} · ${escapeHtml(pane.command)} · ${escapeHtml(pane.pane_id)}</div>
+              </div>
+              <span class="badge ${status}">${escapeHtml(pane.status)}</span>
+            </div>
+            <div class="body">
+              <div class="path">${escapeHtml(pane.path)}</div>
+              <pre>${escapeHtml(output || "(no recent output)")}</pre>
+            </div>
+          </article>
+        `;
+      }
+
+      function renderPanes(panes) {
+        const groups = groupPanesBySession(panes);
+        content.className = "sessions";
+        content.innerHTML = Array.from(groups.entries()).map(([session, sessionPanes]) => `
+          <section class="session-group">
+            <div class="session-head">
+              <div class="session-name">${escapeHtml(session)}</div>
+              <div class="session-summary">${escapeHtml(summarizeSession(sessionPanes))}</div>
+            </div>
+            <div class="grid">
+              ${sessionPanes.map(renderPane).join("")}
+            </div>
+          </section>
+        `).join("");
+      }
+
       async function refresh() {
         const token = getToken();
         const options = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
@@ -554,8 +959,14 @@
         }
 
         const data = await response.json();
+        const servedAt = new Date(data.served_at);
         count.textContent = `${data.count} pane${data.count === 1 ? "" : "s"}`;
-        updated.textContent = `Updated ${new Date(data.served_at).toLocaleString()}`;
+        updated.textContent = `Updated ${servedAt.toLocaleString()}`;
+        updatedShort.textContent = servedAt.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        renderOverview(data);
         renderResources(data);
         renderPorts(data);
         renderQuota(data);
@@ -566,26 +977,7 @@
           return;
         }
 
-        content.className = "grid";
-        content.innerHTML = data.panes.map((pane) => {
-          const output = (pane.output || []).slice(-12).join("\n");
-          const status = statusClass(pane.status);
-          return `
-            <article class="pane">
-              <div class="pane-head">
-                <div class="title">
-                  <div class="session">${escapeHtml(pane.session)}:${escapeHtml(pane.window)}.${escapeHtml(pane.pane_index)}</div>
-                  <div class="meta">${escapeHtml(pane.window_name)} · ${escapeHtml(pane.command)} · ${escapeHtml(pane.pane_id)}</div>
-                </div>
-                <span class="badge ${status}">${escapeHtml(pane.status)}</span>
-              </div>
-              <div class="body">
-                <div class="path">${escapeHtml(pane.path)}</div>
-                <pre>${escapeHtml(output || "(no recent output)")}</pre>
-              </div>
-            </article>
-          `;
-        }).join("");
+        renderPanes(data.panes);
       }
 
       async function loop() {
@@ -595,6 +987,7 @@
           content.className = "error";
           content.textContent = `Unable to load status: ${error.message}`;
           updated.textContent = "Refresh failed";
+          updatedShort.textContent = "failed";
         }
       }
 

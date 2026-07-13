@@ -192,9 +192,30 @@ def test_index_serves_dashboard(monkeypatch):
     assert "/api/status" in html
     assert "?token=" not in html
     assert "Authorization" in html
+    assert '<body id="top">' in html
+    assert 'class="brand-link" href="#top"' in html
+    assert 'id="overview"' in html
+    assert 'id="sessions"' in html
     assert 'id="resources"' in html
     assert 'id="ports"' in html
     assert 'id="quota"' in html
     assert "codex_quota" in html
+    assert "renderOverview(data)" in html
+    assert "resourceSummary" in html
+    assert "overview-meta" in html
+    assert "overview-detail" in html
+    assert "scroll-padding-top" in html
+    assert "#updated" in html
+    assert 'id="updated-short"' in html
+    assert "toLocaleTimeString" in html
+    assert 'minute: "2-digit"' in html
+    assert 'target: "#sessions"' in html
+    assert 'target: "#resources"' in html
+    assert 'target: "#ports"' in html
+    assert 'target: "#quota"' in html
+    assert "Details >" in html
     assert "GPU util" in html
     assert "Mem" in html
+    assert "groupPanesBySession" in html
+    assert "renderPanes(data.panes)" in html
+    assert 'class="session-group"' in html
