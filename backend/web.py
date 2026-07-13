@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 
 from backend.codex_quota import CodexQuotaCache
 from backend.ports import PortMonitor, monitored_ports_from_env
+from backend.resources import ResourceMonitor
 from backend.tmux_monitor import TmuxMonitor
 
 
@@ -42,12 +43,13 @@ MONITOR_PORTS = monitored_ports_from_env(read_env_file())
 
 
 app = FastAPI(
-    title="Tmux Monitor",
+    title="RunWatch",
     version="0.1.0",
 )
 app.state.monitor = TmuxMonitor(output_lines=12)
 app.state.codex_quota_cache = CodexQuotaCache()
 app.state.port_monitor = PortMonitor(ports=MONITOR_PORTS)
+app.state.resource_monitor = ResourceMonitor()
 
 
 def require_token(authorization: str | None = Header(default=None)):
@@ -95,6 +97,7 @@ def status(_: None = Depends(require_token)):
         "served_at": datetime.now().isoformat(),
         "count": len(panes),
         "panes": panes,
+        "resources": app.state.resource_monitor.collect(),
         "ports": app.state.port_monitor.collect(),
         "codex_quota": app.state.codex_quota_cache.get(),
     }

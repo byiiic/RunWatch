@@ -1,3 +1,5 @@
+import errno
+
 from backend.ports import PortMonitor, monitored_ports_from_env, parse_lsof_output
 
 
@@ -37,7 +39,10 @@ def test_port_monitor_marks_missing_listener_available():
     def runner(command):
         return 1, "", ""
 
-    monitor = PortMonitor(ports=[8765], runner=runner)
+    def binder(port):
+        assert port == 8765
+
+    monitor = PortMonitor(ports=[8765], runner=runner, binder=binder)
 
     assert monitor.collect() == [
         {
@@ -50,6 +55,59 @@ def test_port_monitor_marks_missing_listener_available():
             "address": None,
         }
     ]
+
+
+def test_port_monitor_marks_hidden_listener_unavailable():
+    def runner(command):
+        return 1, "", ""
+
+    def binder(port):
+        error = OSError("address already in use")
+        error.errno = errno.EADDRINUSE
+        raise error
+
+    monitor = PortMonitor(ports=[8000], runner=runner, binder=binder)
+
+    assert monitor.collect() == [
+        {
+            "port": 8000,
+            "status": "unavailable",
+            "occupied": None,
+            "pid": None,
+            "command": None,
+            "user": None,
+            "address": None,
+            "error": "address already in use",
+        }
+    ]
+
+
+def test_port_monitor_marks_permission_denied_unavailable():
+    def runner(command):
+        return 1, "", ""
+
+    def binder(port):
+        error = OSError("permission denied")
+        error.errno = errno.EACCES
+        raise error
+
+    monitor = PortMonitor(ports=[80], runner=runner, binder=binder)
+
+    assert monitor.collect()[0]["status"] == "unavailable"
+
+
+def test_port_monitor_marks_operation_not_permitted_unavailable():
+    def runner(command):
+        return 1, "", ""
+
+    def binder(port):
+        error = OSError("operation not permitted")
+        error.errno = errno.EPERM
+        raise error
+
+    monitor = PortMonitor(ports=[8000], runner=runner, binder=binder)
+
+    assert monitor.collect()[0]["status"] == "unavailable"
 
 
 def test_port_monitor_collects_lsof_listener():

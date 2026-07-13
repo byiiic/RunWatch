@@ -1,6 +1,7 @@
-# Monitor Release Usage
+# RunWatch Release Usage
 
-This package is for local or LAN tmux monitoring.
+RunWatch is a local or LAN runtime status dashboard for tmux panes, ports,
+Codex quota, and machine resources.
 
 ## Requirements
 
@@ -67,15 +68,28 @@ The dashboard reads monitored ports from `.env`:
 ```
 
 The panel is read-only. It shows whether a port is occupied plus the listener
-command, PID, user, and address when available. If `lsof` cannot inspect a port,
-the panel marks that port as `unknown` instead of `available`.
+command, PID, user, and address when available. If a listener is hidden from
+`lsof` but the port cannot be bound, the panel marks it as `unavailable`. If
+the port cannot be inspected at all, it is marked as `unknown`.
+
+## Resource Panel
+
+The dashboard also shows read-only system resources:
+
+- CPU load from `/proc/loadavg`
+- Memory usage from `/proc/meminfo`
+- GPU utilization, memory, and temperature from `nvidia-smi` when available
+
+If `nvidia-smi` is missing or fails, the GPU card is marked as `unknown`.
 
 ## Implementation Flow
 
 - `backend/ports.py` collects port listeners with `lsof`.
+- `backend/resources.py` collects CPU, memory, and GPU resource data.
 - `backend/web.py` adds port data to `/api/status`.
-- `backend/static/index.html` renders the port cards.
+- `backend/static/index.html` renders resource and port cards.
 - `backend/test_ports.py` covers parser and collector behavior.
+- `backend/test_resources.py` covers resource parser and collector behavior.
 - `backend/test_web.py` checks that `/api/status` includes `ports`.
 
 ## Security Notes

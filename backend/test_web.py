@@ -111,9 +111,14 @@ def test_status_returns_panes_from_monitor(monkeypatch):
         def collect(self):
             return [{"port": 8765, "occupied": True}]
 
+    class FakeResourceMonitor:
+        def collect(self):
+            return {"memory": {"available": True}}
+
     web.app.state.monitor = FakeMonitor()
     web.app.state.codex_quota_cache = FakeQuotaCache()
     web.app.state.port_monitor = FakePortMonitor()
+    web.app.state.resource_monitor = FakeResourceMonitor()
 
     response = web.status()
 
@@ -122,6 +127,7 @@ def test_status_returns_panes_from_monitor(monkeypatch):
     assert "served_at" in response
     assert response["codex_quota"] == {"available": True}
     assert response["ports"] == [{"port": 8765, "occupied": True}]
+    assert response["resources"] == {"memory": {"available": True}}
 
 
 def test_status_reports_monitor_errors(monkeypatch):
@@ -182,10 +188,13 @@ def test_index_serves_dashboard(monkeypatch):
     assert isinstance(response, FileResponse)
     assert response.path.name == "index.html"
     html = response.path.read_text()
-    assert "Tmux Monitor" in html
+    assert "RunWatch" in html
     assert "/api/status" in html
     assert "?token=" not in html
     assert "Authorization" in html
+    assert 'id="resources"' in html
     assert 'id="ports"' in html
     assert 'id="quota"' in html
     assert "codex_quota" in html
+    assert "GPU util" in html
+    assert "Mem" in html

@@ -1,4 +1,6 @@
+import errno
 import re
+import socket
 import subprocess
 from collections.abc import Callable
 
@@ -63,6 +65,24 @@ def unknown_port(port: int, error: str) -> dict:
     }
 
 
+def unavailable_port(port: int, error: str) -> dict:
+    return {
+        "port": port,
+        "status": "unavailable",
+        "occupied": None,
+        "pid": None,
+        "command": None,
+        "user": None,
+        "address": None,
+        "error": error,
+    }
+
+
+def can_bind_port(port: int) -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("0.0.0.0", port))
+
+
 def parse_lsof_output(port: int, output: str) -> dict:
     for line in output.splitlines()[1:]:
         fields = line.split(None, 8)
@@ -97,9 +117,11 @@ class PortMonitor:
         self,
         ports: list[int] | None = None,
         runner: Callable[[list[str]], tuple[int, str, str]] = run_lsof,
+        binder: Callable[[int], None] = can_bind_port,
     ):
         self.ports = ports or monitored_ports_from_env()
         self.runner = runner
+        self.binder = binder
 
     def collect(self) -> list[dict]:
         results = []
@@ -113,9 +135,19 @@ class PortMonitor:
                 continue
 
             if returncode != 0:
-                results.append(empty_port(port))
+                results.append(self.probe_port(port))
                 continue
 
             results.append(parse_lsof_output(port, stdout))
 
         return results
+
+    def probe_port(self, port: int) -> dict:
+        try:
+            self.binder(port)
+        except OSError as exc:
+            if exc.errno in {errno.EADDRINUSE, errno.EACCES, errno.EPERM}:
+                return unavailable_port(port, str(exc))
+            return unknown_port(port, str(exc))
+
+        return empty_port(port)
