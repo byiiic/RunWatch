@@ -74,6 +74,7 @@
         gap: 16px;
       }
 
+      .ports,
       .quota {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -81,6 +82,7 @@
         margin-bottom: 18px;
       }
 
+      .port-card,
       .quota-card {
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -88,6 +90,7 @@
         padding: 14px 16px;
       }
 
+      .port-title,
       .quota-title {
         display: flex;
         align-items: center;
@@ -96,6 +99,30 @@
         margin-bottom: 10px;
         font-size: 13px;
         color: var(--muted);
+      }
+
+      .port-value {
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .port-value.used {
+        color: var(--failed);
+      }
+
+      .port-value.free {
+        color: var(--running);
+      }
+
+      .port-value.unknown {
+        color: var(--idle);
+      }
+
+      .port-meta {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        overflow-wrap: anywhere;
       }
 
       .quota-percent {
@@ -247,9 +274,11 @@
     </header>
     <main>
       <section id="quota" class="quota"></section>
+      <section id="ports" class="ports"></section>
       <div id="content" class="empty">Loading tmux status...</div>
     </main>
     <script>
+      const ports = document.getElementById("ports");
       const quota = document.getElementById("quota");
       const content = document.getElementById("content");
       const count = document.getElementById("count");
@@ -362,6 +391,36 @@
         `;
       }
 
+      function renderPorts(data) {
+        const portData = data.ports || [];
+        if (!portData.length) {
+          ports.innerHTML = "";
+          return;
+        }
+
+        ports.innerHTML = portData.map((item) => {
+          const isUnknown = item.status === "unknown";
+          const status = isUnknown ? "unknown" : item.occupied ? "used" : "free";
+          const label = isUnknown ? "unknown" : item.occupied ? "occupied" : "available";
+          const meta = isUnknown
+            ? item.error || "Unable to inspect this port"
+            : item.occupied
+            ? `${item.command || "unknown"} · PID ${item.pid || "unknown"} · ${item.address || "address unknown"}`
+            : "No listener found";
+
+          return `
+            <div class="port-card">
+              <div class="port-title">
+                <span>Port ${escapeHtml(item.port)}</span>
+                <span>${escapeHtml(label)}</span>
+              </div>
+              <div class="port-value ${status}">${escapeHtml(label)}</div>
+              <div class="port-meta">${escapeHtml(meta)}</div>
+            </div>
+          `;
+        }).join("");
+      }
+
       async function refresh() {
         const token = getToken();
         const options = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
@@ -380,6 +439,7 @@
         const data = await response.json();
         count.textContent = `${data.count} pane${data.count === 1 ? "" : "s"}`;
         updated.textContent = `Updated ${new Date(data.served_at).toLocaleString()}`;
+        renderPorts(data);
         renderQuota(data);
 
         if (!data.panes.length) {

@@ -41,6 +41,38 @@ def test_environment_token_overrides_env_file(monkeypatch, tmp_path):
     assert web.MONITOR_TOKEN == "from-env"
 
 
+def test_ports_load_from_env_file(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("MONITOR_TOKEN", raising=False)
+    monkeypatch.delenv("MONITOR_PORTS", raising=False)
+    tmp_path.joinpath(".env").write_text(
+        "MONITOR_TOKEN=from-file\n"
+        "MONITOR_PORTS=8765,8888\n"
+    )
+
+    import backend.web as web
+
+    web = importlib.reload(web)
+
+    assert web.app.state.port_monitor.ports == [8765, 8888]
+
+
+def test_environment_ports_do_not_override_env_file(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("MONITOR_TOKEN", "from-env")
+    monkeypatch.setenv("MONITOR_PORTS", "6006,8000")
+    tmp_path.joinpath(".env").write_text(
+        "MONITOR_TOKEN=from-file\n"
+        "MONITOR_PORTS=8765,8888\n"
+    )
+
+    import backend.web as web
+
+    web = importlib.reload(web)
+
+    assert web.app.state.port_monitor.ports == [8765, 8888]
+
+
 def test_health_reports_ok(monkeypatch):
     web = load_web(monkeypatch)
 
@@ -75,8 +107,13 @@ def test_status_returns_panes_from_monitor(monkeypatch):
         def get(self):
             return {"available": True}
 
+    class FakePortMonitor:
+        def collect(self):
+            return [{"port": 8765, "occupied": True}]
+
     web.app.state.monitor = FakeMonitor()
     web.app.state.codex_quota_cache = FakeQuotaCache()
+    web.app.state.port_monitor = FakePortMonitor()
 
     response = web.status()
 
@@ -84,6 +121,7 @@ def test_status_returns_panes_from_monitor(monkeypatch):
     assert response["count"] == 1
     assert "served_at" in response
     assert response["codex_quota"] == {"available": True}
+    assert response["ports"] == [{"port": 8765, "occupied": True}]
 
 
 def test_status_reports_monitor_errors(monkeypatch):
@@ -148,5 +186,6 @@ def test_index_serves_dashboard(monkeypatch):
     assert "/api/status" in html
     assert "?token=" not in html
     assert "Authorization" in html
+    assert 'id="ports"' in html
     assert 'id="quota"' in html
     assert "codex_quota" in html

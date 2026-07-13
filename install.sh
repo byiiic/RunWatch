@@ -11,9 +11,9 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 if [ ! -f .env ]; then
-  printf 'MONITOR_TOKEN=abc123\n' > .env
+  printf 'MONITOR_TOKEN=abc123\nMONITOR_PORTS=8765,6006,8000,8888\n' > .env
   chmod 600 .env
-  echo "Created .env with MONITOR_TOKEN=abc123."
+  echo "Created .env with MONITOR_TOKEN and MONITOR_PORTS."
 fi
 
 UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" uv sync

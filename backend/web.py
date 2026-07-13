@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 
 from backend.codex_quota import CodexQuotaCache
+from backend.ports import PortMonitor, monitored_ports_from_env
 from backend.tmux_monitor import TmuxMonitor
 
 
@@ -37,6 +38,7 @@ def get_setting(name: str) -> str | None:
 
 
 MONITOR_TOKEN = get_setting("MONITOR_TOKEN")
+MONITOR_PORTS = monitored_ports_from_env(read_env_file())
 
 
 app = FastAPI(
@@ -45,6 +47,7 @@ app = FastAPI(
 )
 app.state.monitor = TmuxMonitor(output_lines=12)
 app.state.codex_quota_cache = CodexQuotaCache()
+app.state.port_monitor = PortMonitor(ports=MONITOR_PORTS)
 
 
 def require_token(authorization: str | None = Header(default=None)):
@@ -92,5 +95,6 @@ def status(_: None = Depends(require_token)):
         "served_at": datetime.now().isoformat(),
         "count": len(panes),
         "panes": panes,
+        "ports": app.state.port_monitor.collect(),
         "codex_quota": app.state.codex_quota_cache.get(),
     }
