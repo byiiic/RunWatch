@@ -7,8 +7,11 @@ Codex quota, and machine resources.
 
 - Linux
 - tmux
-- uv
 - Python 3.10 or newer
+- uv for this repository
+
+For a fresh VM, a machine without `tmux`, or a user without `sudo`, follow
+[PREREQUISITES.md](PREREQUISITES.md) first.
 
 Install uv if needed:
 
@@ -39,7 +42,7 @@ Do not commit `.env`.
 ## Start
 
 ```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run uvicorn backend.web:app --host 0.0.0.0 --port 8765
+uv run uvicorn backend.web:app --host 0.0.0.0 --port 8765
 ```
 
 Open `http://127.0.0.1:8765/` locally, or use the machine LAN IP from another
@@ -56,7 +59,7 @@ Ctrl+C
 ## Change Host Or Port
 
 ```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run uvicorn backend.web:app --host 0.0.0.0 --port 8766
+uv run uvicorn backend.web:app --host 0.0.0.0 --port 8766
 ```
 
 ## Port Panel

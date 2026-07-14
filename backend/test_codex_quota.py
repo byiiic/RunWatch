@@ -1,6 +1,14 @@
 import json
+import os
+import sys
 
-from backend.codex_quota import CodexQuotaCache, find_latest_codex_quota
+from backend import codex_quota
+from backend.codex_quota import (
+    CODEX_QUOTA_CACHE_SECONDS,
+    CodexQuotaCache,
+    find_latest_codex_quota,
+    query_codex_quota,
+)
 
 
 def write_jsonl(path, events):
@@ -63,6 +71,103 @@ def test_finds_latest_rate_limits_from_session_logs(tmp_path):
     assert result["rate_limits"]["plan_type"] == "pro"
     assert result["rate_limits"]["primary"]["used_percent"] == 74.0
     assert result["rate_limits"]["secondary"]["used_percent"] == 97.0
+
+
+def test_uses_latest_event_timestamp_instead_of_latest_file_mtime(tmp_path):
+    stale = tmp_path / "sessions" / "stale.jsonl"
+    current = tmp_path / "sessions" / "current.jsonl"
+
+    write_jsonl(
+        stale,
+        [
+            {
+                "timestamp": "2026-07-14T04:00:00Z",
+                "payload": {
+                    "rate_limits": {
+                        "primary": {"used_percent": 61.0},
+                    }
+                },
+            }
+        ],
+    )
+    write_jsonl(
+        current,
+        [
+            {
+                "timestamp": "2026-07-14T05:00:00Z",
+                "payload": {
+                    "rate_limits": {
+                        "primary": {"used_percent": 73.0},
+                    }
+                },
+            }
+        ],
+    )
+    os.utime(stale, (2000, 2000))
+    os.utime(current, (1000, 1000))
+
+    result = find_latest_codex_quota(tmp_path)
+
+    assert result["timestamp"] == "2026-07-14T05:00:00Z"
+    assert result["rate_limits"]["primary"]["used_percent"] == 73.0
+
+
+def test_default_cache_matches_dashboard_refresh_interval():
+    assert CODEX_QUOTA_CACHE_SECONDS == 10
+
+
+def test_queries_current_quota_from_codex_app_server():
+    server = r'''
+import json
+import sys
+
+initialize = json.loads(sys.stdin.readline())
+print(json.dumps({"id": initialize["id"], "result": {}}), flush=True)
+json.loads(sys.stdin.readline())
+request = json.loads(sys.stdin.readline())
+print(json.dumps({
+    "id": request["id"],
+    "result": {
+        "rateLimits": {
+            "limitId": "codex",
+            "primary": {
+                "usedPercent": 74,
+                "windowDurationMins": 10080,
+                "resetsAt": 1784488348,
+            },
+            "planType": "pro",
+        }
+    },
+}), flush=True)
+'''
+
+    result = query_codex_quota(
+        command=(sys.executable, "-u", "-c", server),
+        timeout_seconds=2,
+    )
+
+    assert result["available"] is True
+    assert result["rate_limits"] == {
+        "limit_id": "codex",
+        "primary": {
+            "used_percent": 74,
+            "window_minutes": 10080,
+            "resets_at": 1784488348,
+        },
+        "plan_type": "pro",
+    }
+
+
+def test_falls_back_to_session_log_when_app_server_is_unavailable(monkeypatch):
+    fallback = {"available": True, "rate_limits": {"limit_id": "fallback"}}
+
+    def unavailable():
+        raise TimeoutError("not responding")
+
+    monkeypatch.setattr(codex_quota, "query_codex_quota", unavailable)
+    monkeypatch.setattr(codex_quota, "find_latest_codex_quota", lambda: fallback)
+
+    assert codex_quota.read_codex_quota() == fallback
 
 
 def test_returns_unavailable_when_no_rate_limits_exist(tmp_path):

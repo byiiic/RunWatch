@@ -16,8 +16,8 @@ if [ ! -f .env ]; then
   echo "Created .env with MONITOR_TOKEN and MONITOR_PORTS."
 fi
 
-UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" uv sync
+uv sync
 
 echo "Install complete."
 echo "Next:"
-echo "  UV_CACHE_DIR=/tmp/uv-cache uv run uvicorn backend.web:app --host 0.0.0.0 --port 8765"
+echo "  uv run uvicorn backend.web:app --host 0.0.0.0 --port 8765"
