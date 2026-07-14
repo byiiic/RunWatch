@@ -213,7 +213,10 @@ class TmuxMonitor:
             r"\bexception\b",
             r"\b[a-z_]*error:",
             r"^\s*(error|fatal|critical)\s*:",
-            r"\bfailed\b",
+            r"^\s*(failed|failure)\s*:",
+            r"\b(command|process|job|task)\s+failed\b",
+            r"\bfailed\s+with\b",
+            r"\bfailed\s+\(exit\b",
             r"\bsegmentation fault\b",
             r"\bout of memory\b",
         ]

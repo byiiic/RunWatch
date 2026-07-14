@@ -164,8 +164,44 @@
         color: var(--failed);
       }
 
+      .overview-value.attention {
+        color: var(--failed);
+      }
+
+      .overview-value.active {
+        color: var(--running);
+      }
+
       .overview-card.good .overview-value {
         color: var(--running);
+      }
+
+      .overview-meta-strong {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .overview-meta-strong.active {
+        color: var(--running);
+      }
+
+      .overview-meta-strong.attention {
+        color: var(--failed);
+      }
+
+      .overview-status-running {
+        color: var(--running);
+        font-weight: 700;
+      }
+
+      .overview-status-idle {
+        color: var(--idle);
+        font-weight: 700;
+      }
+
+      .overview-status-failed {
+        color: var(--failed);
+        font-weight: 700;
       }
 
       #overview,
@@ -577,16 +613,25 @@
 
       function paneSummary(panes) {
         const counts = paneCounts(panes);
-        const meta = [
-          counts.running ? `${counts.running} running` : "",
-          counts.failed ? `${counts.failed} failed` : "",
-          counts.idle ? `${counts.idle} idle` : "",
-        ].filter(Boolean).join(" · ") || "no active panes";
+        const statuses = [
+          ["running", counts.running],
+          ["failed", counts.failed],
+          ["idle", counts.idle],
+        ].filter(([, statusCount]) => statusCount);
+        const meta = statuses
+          .map(([status, statusCount]) => `${statusCount} ${status}`)
+          .join(" · ") || "no active panes";
+        const metaHtml = statuses.length
+          ? statuses.map(([status, statusCount]) =>
+              `<span class="overview-status-${status}">${statusCount} ${status}</span>`
+            ).join(" · ")
+          : escapeHtml(meta);
         return {
           label: "Sessions",
           target: "#sessions",
           value: `${counts.total} pane${counts.total === 1 ? "" : "s"}`,
           meta,
+          metaHtml,
           tone: counts.failed ? "attention" : "good",
         };
       }
@@ -610,21 +655,27 @@
           : "GPU unknown";
         const memoryText = memory.available ? `RAM ${formatPercent(memory.used_percent)}` : "RAM unknown";
         const value = load.available ? `CPU ${load.load_1m}` : "CPU unknown";
-        const isHot = (
-          memory.available && Number(memory.used_percent) >= 85
-        ) || (
-          gpu && (
-            Number(gpu.utilization_percent) >= 90 ||
-            Number(gpu.memory_used_percent) >= 90
-          )
+        const cpuHot = load.available && Number(load.load_1m) >= 1;
+        const cpuActive = load.available && Number(load.load_1m) >= 0.1;
+        const gpuHot = gpu && Number(gpu.utilization_percent) >= 80;
+        const gpuMemoryHot = gpu && Number(gpu.memory_used_percent) >= 80;
+        const gpuActive = gpu && (
+          Number(gpu.utilization_percent) >= 1 ||
+          Number(gpu.memory_used_percent) >= 1
         );
+        const gpuTone = gpuHot || gpuMemoryHot ? "attention" : gpuActive ? "active" : "";
+        const gpuMetaHtml = gpu
+          ? `<span class="overview-meta-strong ${gpuTone}">GPU ${escapeHtml(formatPercent(gpu.utilization_percent))}</span> · mem ${escapeHtml(formatPercent(gpu.memory_used_percent))}`
+          : `<span class="overview-meta-strong">GPU unknown</span>`;
 
         return {
           label: "Resources",
           target: "#resources",
           value,
           meta: `${memoryText} · ${gpuText}`,
-          tone: isHot ? "attention" : "",
+          metaHtml: `${escapeHtml(memoryText)} · ${gpuMetaHtml}`,
+          valueTone: cpuHot ? "attention" : cpuActive ? "active" : "",
+          tone: "",
         };
       }
 
@@ -721,9 +772,9 @@
                 <div class="overview-label">${escapeHtml(item.label)}</div>
                 <div class="overview-detail">Details ></div>
               </div>
-              <div class="overview-value">${escapeHtml(item.value)}</div>
+              <div class="overview-value ${escapeHtml(item.valueTone || "")}">${escapeHtml(item.value)}</div>
             </div>
-            <div class="overview-meta">${escapeHtml(item.meta)}</div>
+            <div class="overview-meta">${item.metaHtml || escapeHtml(item.meta)}</div>
           </a>
         `).join("");
       }

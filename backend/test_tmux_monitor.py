@@ -80,6 +80,26 @@ def test_runtime_error_lines_mark_failed():
     assert monitor.detect_status(pane) == "failed"
 
 
+def test_git_success_output_with_failed_to_compress_is_idle():
+    monitor = TmuxMonitor()
+
+    pane = make_pane(
+        "fish",
+        [
+            "remote: Enumerating objects: 17, done.",
+            "Delta compression using up to 20 threads",
+            "Compressing objects: 100% (9/9), done.",
+            "warning: failed to compress using up to 20 threads",
+            "Writing objects: 100% (9/9), 15.08 KiB | 3.02 MiB/s, done.",
+            "To github.com:baiyic/MSNN.git",
+            " + 8a7ac23...64c5760 torch -> torch (forced update)",
+            "baiyc@liiao-5090-v2-1 ~/s/MSNN (torch)>",
+        ],
+    )
+
+    assert monitor.detect_status(pane) == "idle"
+
+
 def test_service_start_after_old_error_is_running():
     monitor = TmuxMonitor()
 
